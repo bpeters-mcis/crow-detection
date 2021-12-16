@@ -1,0 +1,164 @@
+##########################
+# Motion Detected
+###########################
+- id: CrowMotionStart
+  alias: Crow Motion started
+  # This should trigger when motion is detected, or if someone clicks the "Manually check for crows" button
+  trigger:
+  - platform: webhook
+    webhook_id: crowmotionstart
+  - platform: state
+    entity_id: binary_sensor.crowcam_motion_detected
+    from: 'off'
+  - platform: state
+    entity_id: input_boolean.manual_crow_check
+    to: 'on'
+  action:
+  # The first action is to take a snapshot from the camera, and save the file.  This is later used for image recognition.
+  - service: camera.snapshot
+    target:
+      entity_id:
+      - camera.crowcam
+    data:
+      filename: /config/www/snapshot.png
+  # Next is taking a 2nd snapshot, to start building a time series of images to post to slack
+  - service: camera.snapshot
+    target:
+      entity_id:
+      - camera.crowcam
+    data:
+      filename: /config/www/motion-1.png
+  # Now we set the "crow motion scanning" boolean to on, so that our Home Assistant page can show that detection is running
+  - service: input_boolean.turn_on
+    target:
+      entity_id: input_boolean.crow_motion_scanning
+  # Wait one second
+  - delay:
+      hours: 0
+      minutes: 0
+      seconds: 1
+      milliseconds: 0
+  # Take another snapshot for our time series, and wait another second
+  - service: camera.snapshot
+    target:
+      entity_id:
+      - camera.crowcam
+    data:
+      filename: /config/www/motion-2.png
+  - delay:
+      hours: 0
+      minutes: 0
+      seconds: 1
+      milliseconds: 0
+  # Take the final snapshot for time series
+  - service: camera.snapshot
+    target:
+      entity_id:
+      - camera.crowcam
+    data:
+      filename: /config/www/motion-3.png
+  # Turn off the "crow motion scanning" to show this is done, and turn off the "manually check for crows", in case that's how this was triggered
+  - service: input_boolean.turn_off
+    target:
+      entity_id:
+      - input_boolean.manual_crow_check
+      - input_boolean.crow_motion_scanning
+  # Send a slack notification that motion was detected, with one of our snapshots taken earlier
+  - service: notify.slack
+    data:
+      target: '#crow-motion-events'
+      message: Here is a pic of maybe motion, enjoy
+      data:
+        file:
+          path: /config/www/motion-1.png
+  mode: single
+
+
+##########################
+# Motion Detected
+###########################
+- id: '1636121750849'
+  alias: Crows - Notify on motion
+  description: ''
+  trigger:
+  # This automation triggers when our "ha_detektion" integration detects a bird, using a snapshot taken earlier, and only triggers
+  # if we haven't sent a notificaiton lately (to avoid overwhelming the slack channel)
+  - platform: state
+    entity_id: sensor.object_detection
+    from: 'Off'
+  - platform: state
+    entity_id: sensor.object_detection
+    from: 'off'
+  condition:
+  - condition: state
+    entity_id: input_boolean.recently_notified_about_crows
+    state: 'off'
+  action:
+  - delay:
+      hours: 0
+      minutes: 0
+      seconds: 6
+      milliseconds: 0
+  # This send a notification to my phone, with a link to the dashboard
+  - service: notify.mobile_app_oneplus_a6003
+    data:
+      message: Crow motion!
+      title: Birds found yo
+      data:
+        actions:
+        - action: URI
+          title: Open Tasks
+          uri: /property-cameras/crow-cam
+  # This sends a simple text notification to the slack channel, with a header and divider
+  - service: notify.slack
+    data:
+      target: '#crow-facts'
+      message: Birds Detected
+      data:
+        blocks:
+        - type: header
+          text:
+            type: plain_text
+            text: Detection Details
+        - type: divider
+  # This sends a slack notification with the snapshot taken with the bird, with the detection box around the bird(s)
+  - service: notify.slack
+    data:
+      target: '#crow-facts'
+      message: This image should show a red box around the detected bird
+      data:
+        file:
+          path: /config/www/snapshot-boxes.png
+  # This sends a simple text notification to the slack channel, with a header and divider
+  - service: notify.slack
+    data:
+      target: '#crow-facts'
+      message: Birds Detected
+      data:
+        blocks:
+        - type: header
+          text:
+            type: plain_text
+            text: Recent Images
+        - type: divider
+  # This sends a combined time series of 3 images taken after motion was triggered
+  - service: notify.slack
+    data:
+      target: '#crow-facts'
+      message: Here is a string of images taken every 2 seconds after motion was triggered
+      data:
+        file:
+          path: /config/www/combined_output.png
+  # Turn on the "recently notified" button, and leave it on for 1 minute, to throttle notifications
+  - service: input_boolean.turn_on
+    target:
+      entity_id: input_boolean.recently_notified_about_crows
+  - delay:
+      hours: 0
+      minutes: 1
+      seconds: 0
+      milliseconds: 0
+  - service: input_boolean.turn_off
+    target:
+      entity_id: input_boolean.recently_notified_about_crows
+  mode: single

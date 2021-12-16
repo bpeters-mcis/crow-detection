@@ -1,0 +1,13 @@
+# These "cameras" are using the local files, which were the most recent snapshot(s) from the camera when motion was
+# detected.  This ensures they refresh automatically in the Home Assistant dashboard, instead of being cached
+- platform: local_file
+  file_path: /config/www/snapshot-processing.png
+  name: Processing Crow Image
+
+- platform: local_file
+  file_path: /config/www/snapshot-boxes.png
+  name: Boxed Crow Image
+
+- platform: local_file
+  file_path: /config/www/combined_output.png
+  name: Combined Motion Shots

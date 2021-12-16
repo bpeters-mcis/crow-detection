@@ -1,0 +1,84 @@
+views:
+  - title: Crow Cam
+    path: crow-cam
+    type: panel
+    badges: []
+    cards:
+      - type: vertical-stack
+        cards:
+          - type: horizontal-stack
+            cards:
+              - type: picture-entity
+                entity: camera.crowcamstream
+                camera_image: camera.crowcamstream
+                camera_view: live
+              - type: picture-entity
+                entity: camera.lbfront1
+                camera_image: camera.lbfront1
+                name: LB - Front
+                camera_view: live
+          - type: horizontal-stack
+            cards:
+              - type: picture-entity
+                entity: camera.processing_crow_image
+                camera_image: camera.processing_crow_image
+                name: Last Processed
+              - type: picture-entity
+                entity: camera.boxed_crow_image
+                camera_image: camera.boxed_crow_image
+                name: Last Boxed
+          - type: vertical-stack
+            cards:
+              - type: markdown
+                content: >-
+                  # Detection Stats
+
+                  {% if state_attr('sensor.object_detection', 'Detections') !=
+                  {} %}
+
+                  **Detection Details:** {{
+                  state_attr('sensor.object_detection', 'Detections') }}
+
+                  {% endif %}
+
+                  **Current Status:** {{ state_attr('sensor.object_detection',
+                  'Status') }}
+
+                  **Last Checked:** {{ state_attr('sensor.object_detection',
+                  'Last Checked') }}
+
+
+                  **Checks Today:** {{ state_attr('sensor.object_detection',
+                  'Number Of Checks') }}
+
+                  **Next Reset:** {{ state_attr('sensor.object_detection',
+                  'Count Last Reset') }}
+
+
+                  # Notification Settings
+
+                  {% if is_state('input_boolean.recently_notified_about_crows',
+                  'on') %}
+
+                  - Notification paused due to recent message
+
+                  {% endif %}
+              - type: entities
+                entities:
+                  - entity: automation.crowcamera_motion_started
+                  - entity: automation.crows_notify_on_motion
+                    name: Detection Notification Enabled
+                  - entity: input_boolean.manual_crow_check
+                  - entity: binary_sensor.crowcam_motion_detected
+                    name: Motion Detection Status
+                  - entity: sensor.object_detection
+                  - entity: binary_sensor.crowcam_online
+              - type: history-graph
+                entities:
+                  - entity: binary_sensor.crowcam_motion_detected
+                  - entity: binary_sensor.is_crow_detection_running
+                  - entity: image_processing.doods_crowscamera
+                    name: Detections
+                  - entity: sensor.object_detection
+                hours_to_show: 1
+                refresh_interval: 0
